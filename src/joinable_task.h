@@ -87,3 +87,15 @@ Result sync_wait(Task<Result> &task)
     wait_task.run();
     return *result;
 }
+
+template <>
+void sync_wait(Task<void> &task)
+{
+    static auto joiner = [](Task<void> &t) -> JoinableTask
+    {
+        co_await t;
+    };
+
+    auto wait_task = joiner(task);
+    wait_task.run();
+}

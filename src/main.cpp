@@ -11,30 +11,45 @@
 #include "pool.h"
 #include "logger.h"
 #include "task.h"
+#include "task_utils.h"
 #include "joinable_task.h"
 
-Task<int> run_async_print(Pool &pool, int data)
+Task<void> run_async_print(Pool &pool, int data)
 {
     co_await pool.schedule();
-    sleep(1);
-    co_return data * 5;
+    (void)data;
+    // sleep(1);
+    co_return;
 }
 
-Task<int> do_work(Pool &pool)
+Task<bool> other(Pool &pool)
 {
-    std::vector<Task<int>> tasks;
-    for (auto i = 0; i < 10; i++)
+    co_await pool.schedule();
+    co_return true;
+}
+
+Task<void> do_work(Pool &pool)
+{
+    std::vector<Task<void>> tasks;
+    for (auto i = 0; i < 100; i++)
     {
         tasks.emplace_back(run_async_print(pool, i));
     }
-    for (auto &t : tasks)
-    {
-        auto &value = co_await t;
-        std::cout << "Got a value: " << value << "\n";
-    }
+    co_await await_all(tasks);
+    // for (auto &t : results)
+    // {
+    //     std::cout << "Got a value: " << t << "\n";
+    // }
 
     Logger::puts("=== Do work done");
-    co_return 123;
+
+    auto [a, b] = co_await await_all(
+        other(pool),
+        other(pool));
+
+    Logger::printf("Got stuff from await_all! %d, %i\n", a, b);
+
+    co_return;
 }
 
 int main()

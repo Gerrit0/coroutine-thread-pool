@@ -2,7 +2,6 @@
 
 #include <condition_variable>
 #include <coroutine>
-#include <cstdint>
 #include <list>
 #include <mutex>
 #include <queue>
@@ -39,7 +38,6 @@ public:
             constexpr void await_resume() const noexcept {}
             void await_suspend(std::coroutine_handle<> coro) const noexcept
             {
-                Logger::printf("Scheduling %p to run on another thread\n", coro.address());
                 m_pool->enqueue_task(coro);
             }
         };
