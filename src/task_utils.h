@@ -3,12 +3,12 @@
 #include "task.h"
 
 template <typename T>
-Task<std::vector<T>> await_all(std::vector<Task<T>> &tasks)
+Task<std::vector<T>> await_all(const std::vector<Task<T>> &tasks)
 {
     std::vector<T> result;
     result.reserve(tasks.size());
 
-    for (auto &task : tasks)
+    for (const auto &task : tasks)
     {
         result.emplace_back(co_await task);
     }
@@ -16,9 +16,9 @@ Task<std::vector<T>> await_all(std::vector<Task<T>> &tasks)
     co_return result;
 }
 
-Task<void> await_all(std::vector<Task<void>> &tasks)
+Task<void> await_all(const std::vector<Task<void>> &tasks)
 {
-    for (auto &task : tasks)
+    for (const auto &task : tasks)
     {
         co_await task;
     }

@@ -9,6 +9,27 @@
 
 namespace detail
 {
+    template <typename TaskState>
+    void ref_state(TaskState *state)
+    {
+        std::lock_guard lock(state->mutex);
+        ++state->references;
+    }
+
+    template <typename TaskState>
+    void unref_state(TaskState *state)
+    {
+        bool shouldDelete;
+        {
+            std::lock_guard lock(state->mutex);
+            shouldDelete = --state->references == 0;
+        }
+        if (shouldDelete)
+        {
+            delete state;
+        }
+    }
+
     template <typename TaskState, typename Result>
     class TaskAwaiter
     {
@@ -17,12 +38,12 @@ namespace detail
     public:
         TaskAwaiter(TaskState *state) : m_state(state)
         {
-            m_state->ref();
+            ref_state(m_state);
         }
 
         ~TaskAwaiter()
         {
-            m_state->unref();
+            unref_state(m_state);
         }
 
         bool await_ready() noexcept
@@ -69,25 +90,6 @@ class Task
         bool complete = false;
         std::vector<std::coroutine_handle<>> continuations = {};
         std::optional<Result> result = std::nullopt;
-
-        void ref()
-        {
-            std::lock_guard lock(mutex);
-            ++references;
-        }
-
-        void unref()
-        {
-            bool shouldDelete;
-            {
-                std::lock_guard lock(mutex);
-                shouldDelete = --references == 0;
-            }
-            if (shouldDelete)
-            {
-                delete this;
-            }
-        }
     };
 
     // Don't use a shared_ptr here because we may manage this memory across threads
@@ -96,28 +98,28 @@ class Task
 public:
     Task(TaskState *state) : m_state(state)
     {
-        m_state->ref();
+        detail::ref_state(m_state);
     }
 
     Task(const Task &t) : m_state(t.m_state)
     {
-        m_state->ref();
+        detail::ref_state(m_state);
     }
 
     Task &operator=(const Task &t)
     {
         if (m_state != t.m_state)
         {
-            m_state->unref();
+            detail::unref_state(m_state);
             m_state = t.m_state;
-            m_state->ref();
+            detail::ref_state(m_state);
         }
         return *this;
     }
 
     ~Task()
     {
-        m_state->unref();
+        detail::unref_state(m_state);
     }
 
     class promise_type
@@ -129,7 +131,7 @@ public:
         promise_type(const promise_type &) = delete;
         ~promise_type()
         {
-            m_state->unref();
+            detail::unref_state(m_state);
         }
 
         Task get_return_object()
@@ -181,7 +183,7 @@ public:
         }
     };
 
-    auto operator co_await()
+    auto operator co_await() const
     {
         return detail::TaskAwaiter<TaskState, Result>(m_state);
     }
@@ -196,25 +198,6 @@ class Task<void>
         size_t references = 1;
         bool complete = false;
         std::vector<std::coroutine_handle<>> continuations = {};
-
-        void ref()
-        {
-            std::lock_guard lock(mutex);
-            ++references;
-        }
-
-        void unref()
-        {
-            bool shouldDelete;
-            {
-                std::lock_guard lock(mutex);
-                shouldDelete = --references == 0;
-            }
-            if (shouldDelete)
-            {
-                delete this;
-            }
-        }
     };
 
     // Don't use a shared_ptr here because we may manage this memory across threads
@@ -223,28 +206,28 @@ class Task<void>
 public:
     Task(TaskState *state) : m_state(state)
     {
-        m_state->ref();
+        detail::ref_state(m_state);
     }
 
     Task(const Task &t) : m_state(t.m_state)
     {
-        m_state->ref();
+        detail::ref_state(m_state);
     }
 
     Task &operator=(const Task &t)
     {
         if (m_state != t.m_state)
         {
-            m_state->unref();
+            detail::unref_state(m_state);
             m_state = t.m_state;
-            m_state->ref();
+            detail::ref_state(m_state);
         }
         return *this;
     }
 
     ~Task()
     {
-        m_state->unref();
+        detail::unref_state(m_state);
     }
 
     class promise_type
@@ -256,7 +239,7 @@ public:
         promise_type(const promise_type &) = delete;
         ~promise_type()
         {
-            m_state->unref();
+            detail::unref_state(m_state);
         }
 
         Task get_return_object()
@@ -290,7 +273,7 @@ public:
         }
     };
 
-    auto operator co_await()
+    auto operator co_await() const
     {
         return detail::TaskAwaiter<TaskState, void>(m_state);
     }
