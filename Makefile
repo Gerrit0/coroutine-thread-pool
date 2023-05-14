@@ -24,6 +24,7 @@ CXXFLAGS := -std=c++20 -Werror -I${PWD}/src \
 RELFLAGS := -O3
 DBGFLAGS := -g
 CCOBJFLAGS := $(CXXFLAGS) -c
+LINK_FLAGS := -lboost_iostreams
 
 BIN_PATH := bin
 OBJ_PATH := obj
@@ -60,11 +61,11 @@ watch:
 
 # binary
 $(TARGET): $(OBJ_REL) | $(BIN_PATH)
-	@$(CXX) $(CXXFLAGS) $(RELFLAGS) -o $@ $(OBJ_REL)
+	@$(CXX) $(CXXFLAGS) $(RELFLAGS) -o $@ $(OBJ_REL) $(LINK_FLAGS)
 	@echo Built $(TARGET)
 
 $(TARGET_DBG): $(OBJ_DBG) | $(BIN_PATH)
-	@$(CXX) $(CXXFLAGS) $(DBGFLAGS) -o $@ $(OBJ_DBG)
+	@$(CXX) $(CXXFLAGS) $(DBGFLAGS) -o $@ $(OBJ_DBG) $(LINK_FLAGS)
 	@echo Built $(TARGET_DBG)
 
 # objs

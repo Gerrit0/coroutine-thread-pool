@@ -70,6 +70,7 @@
     "typeindex": "cpp",
     "typeinfo": "cpp",
     "variant": "cpp",
-    "scoped_allocator": "cpp"
+    "scoped_allocator": "cpp",
+    "fstream": "cpp"
   }
 }

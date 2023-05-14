@@ -1,53 +1,45 @@
-#include <string>
-#include <queue>
-#include <iostream>
-#include <thread>
-#include <vector>
-#include <optional>
-
 #include <coroutine>
-#include <condition_variable>
+#include <memory>
+#include <string>
 
-#include "pool.h"
-#include "logger.h"
-#include "task.h"
-#include "task_utils.h"
+#include "data_container.h"
 #include "joinable_task.h"
+#include "logger.h"
+#include "pool.h"
+#include "task_utils.h"
+#include "task.h"
 
-Task<void> run_async_print(Pool &pool, int data)
+Task<std::shared_ptr<DataContainer>> read_data(Pool &pool, std::string file)
 {
     co_await pool.schedule();
-    (void)data;
-    // sleep(1);
-    co_return;
-}
+    FILE *f = fopen(file.c_str(), "r");
 
-Task<bool> other(Pool &pool)
-{
-    co_await pool.schedule();
-    co_return true;
+    if (f == nullptr)
+    {
+        throw std::runtime_error("File does not exist.");
+    }
+
+    auto data = std::make_shared<DataContainer>(1);
+    size_t id = 0;
+    double x, y, z;
+    while (fscanf(f, "%lf %lf %lf", &x, &y, &z) == 3)
+    {
+        data->push_back({id, x, y, z});
+        ++id;
+    }
+
+    Logger::printf("File contained %zu elements\n", data->size());
+
+    fclose(f);
+
+    co_return std::move(data);
 }
 
 Task<void> do_work(Pool &pool)
 {
-    std::vector<Task<void>> tasks;
-    for (auto i = 0; i < 100; i++)
-    {
-        tasks.emplace_back(run_async_print(pool, i));
-    }
-    co_await await_all(tasks);
-    // for (auto &t : results)
-    // {
-    //     std::cout << "Got a value: " << t << "\n";
-    // }
+    auto data = co_await read_data(pool, "input.txt");
 
-    Logger::puts("=== Do work done");
-
-    auto [a, b] = co_await await_all(
-        other(pool),
-        other(pool));
-
-    Logger::printf("Got stuff from await_all! %d, %i\n", a, b);
+    Logger::printf("x = %f, y = %f, z = %f\n", data->at(0).x, data->at(0).y, data->at(0).z);
 
     co_return;
 }
