@@ -37,22 +37,35 @@ public:
 
     ~DataContainerImpl()
     {
-        std::visit(overloaded{[](std::vector<Datum> &) {},
-                              [&](boost::iostreams::mapped_file &file)
-                              {
-                                  file.close();
-                                  if (remove(m_file_name.c_str()) != 0)
-                                  {
-                                      Logger::printf("Failed to remove temporary file %s - %s", m_file_name.c_str(), strerror(errno));
-                                  }
-                              }},
-                   m_data);
+        if (auto file = std::get_if<boost::iostreams::mapped_file>(&m_data))
+        {
+            file->close();
+            if (remove(m_file_name.c_str()) != 0)
+            {
+                Logger::printf("Failed to remove temporary file %s - %s", m_file_name.c_str(), strerror(errno));
+            }
+        }
+    }
+
+    Datum *begin()
+    {
+        return m_data_ptr;
+    }
+
+    Datum *end()
+    {
+        return m_data_ptr + m_size;
     }
 
     Datum &at(size_t index)
     {
         assert(index < m_size);
         return m_data_ptr[index];
+    }
+
+    size_t size() const
+    {
+        return m_size;
     }
 
     void push_back(Datum datum)
@@ -65,7 +78,7 @@ public:
                 m_capacity *= 2;
 
                 auto max_size_bytes = sizeof(Datum) * m_capacity;
-                auto data = std::move(std::get<std::vector<Datum>>(m_data));
+                auto &data = (std::get<std::vector<Datum>>(m_data));
                 boost::iostreams::mapped_file file;
                 boost::iostreams::mapped_file_params params;
                 params.path = m_file_name;
@@ -106,9 +119,11 @@ public:
         ++m_size;
     }
 
-    size_t size() const
+    void remove_if(std::function<bool(Datum &)> fn)
     {
-        return m_size;
+        auto old_end = end();
+        auto new_end = std::remove_if(begin(), old_end, fn);
+        m_size -= static_cast<size_t>(old_end - new_end);
     }
 };
 
@@ -134,4 +149,19 @@ void DataContainer::push_back(Datum datum)
 size_t DataContainer::size() const
 {
     return m_pimpl->size();
+}
+
+Datum *DataContainer::begin()
+{
+    return m_pimpl->begin();
+}
+
+Datum *DataContainer::end()
+{
+    return m_pimpl->end();
+}
+
+void DataContainer::remove_if(std::function<bool(Datum &)> fn)
+{
+    m_pimpl->remove_if(fn);
 }

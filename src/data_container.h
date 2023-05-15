@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <functional>
 
 struct Datum
 {
@@ -20,6 +21,10 @@ public:
     Datum &at(size_t index);
     void push_back(Datum datum);
     size_t size() const;
+    Datum *begin();
+    Datum *end();
+
+    void remove_if(std::function<bool(Datum &)> fn);
 
     DataContainer(size_t id);
     DataContainer(const DataContainer &) = delete;

@@ -1,6 +1,6 @@
 import subprocess
 
-proc = subprocess.Popen(["./bin/ws"])
+proc = subprocess.Popen(["./bin/ws_debug"])
 top = subprocess.Popen(["/usr/bin/top", "-b", "-p", str(proc.pid)], stdout=subprocess.PIPE)
 proc.wait()
 top.kill()

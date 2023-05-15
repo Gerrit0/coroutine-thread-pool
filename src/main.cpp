@@ -39,7 +39,19 @@ Task<void> do_work(Pool &pool)
 {
     auto data = co_await read_data(pool, "input.txt");
 
-    Logger::printf("x = %f, y = %f, z = %f\n", data->at(0).x, data->at(0).y, data->at(0).z);
+    data->remove_if([](auto &d)
+                    { return d.id % 2 == 0; });
+
+    Logger::printf("Filtered file contains %zu elements\n", data->size());
+
+    for (const auto &datum : *data)
+    {
+        Logger::printf("id = %zu, x = %f, y = %f, z = %f\n", datum.id, datum.x, datum.y, datum.z);
+        if (datum.id > 50)
+        {
+            break;
+        }
+    }
 
     co_return;
 }
